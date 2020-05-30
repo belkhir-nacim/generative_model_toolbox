@@ -9,19 +9,11 @@ from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-transforms = transforms.Compose([transforms.ToTensor()])
-train_dataset = datasets.MNIST(
-        './data',
-        train=True,
-        download=True,
-        transform=transforms)
+transforms = transforms.Compose([transforms.ToTensor(),transforms.Normalize([0.5],[0.5])])
 
-test_dataset = datasets.MNIST(
-        './data',
-        train=False,
-        download=True,
-        transform=transforms
-    )
+train_dataset = datasets.MNIST(  './data', train=True, download=True, transform=transforms)
+test_dataset = datasets.MNIST('./data', train=False, download=True, transform=transforms)
+
 BATCH_SIZE = 64         # number of data points in each batch
 N_EPOCHS = 10           # times to run the model on complete data
 INPUT_DIM = 28 * 28     # size of each input
