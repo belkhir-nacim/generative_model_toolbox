@@ -5,7 +5,7 @@ from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 import numpy as np
 from .functions import vq, vq_st, vq_st_i, vq_st_ori, vq_ori, vq_st_i_ori
-from generative_models.utils import weights_init, to_scalar
+from generative_models_toolbox.utils import weights_init, to_scalar
 
 
 

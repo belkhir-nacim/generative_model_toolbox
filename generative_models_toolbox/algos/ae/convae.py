@@ -1,4 +1,4 @@
-from generative_models.layers import ae as parts
+from generative_models_toolbox.layers import ae as parts
 from .base import ConvAE
 import numpy as np
 import torch as pt

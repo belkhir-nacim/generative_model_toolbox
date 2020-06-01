@@ -5,7 +5,7 @@
 
 
 # Importing the libraries
-from generative_models.algos.graphicalmodel.dbn import  DBN
+from generative_models_toolbox.algos.graphicalmodel.dbn import  DBN
 import torch
 from torchvision import datasets,transforms
 from torch.utils.data import Dataset,DataLoader

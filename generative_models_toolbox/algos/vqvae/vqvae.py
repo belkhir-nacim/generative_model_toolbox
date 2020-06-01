@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .functions import vq, vq_st, vq_st_i, vq_st_ori,  vq_st_i_ori
-from generative_models.utils import weights_init
+from generative_models_toolbox.utils import weights_init
 
 
 class VectorQuantizer(nn.Module):
