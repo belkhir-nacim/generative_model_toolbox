@@ -1,5 +1,5 @@
 from torch.nn.init import xavier_uniform_
-
+from .device import Cudafy
 
 def to_scalar(arr):
     if type(arr) == list:
