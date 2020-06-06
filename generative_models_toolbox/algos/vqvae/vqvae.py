@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .functions import vq, vq_st, vq_st_i, vq_st_ori,  vq_st_i_ori
+from .functions import vq, vq_st, vq_st_i, vq_st_ori, vq_st_i_ori
 from generative_models_toolbox.utils import weights_init
 
 
@@ -89,7 +89,7 @@ class VectorQuantizerEMA(nn.Module):
             # Laplace smoothing of the cluster size
             n = torch.sum(self._ema_cluster_size.data)
             self._ema_cluster_size = (
-                        (self._ema_cluster_size + self._epsilon) / (n + self._num_embeddings * self._epsilon) * n)
+                    (self._ema_cluster_size + self._epsilon) / (n + self._num_embeddings * self._epsilon) * n)
             dw = torch.matmul(encodings.t(), flat_input)
             self._ema_w = nn.Parameter(self._ema_w * self._decay + (1 - self._decay) * dw)
             self._embedding.weight = nn.Parameter(self._ema_w / self._ema_cluster_size.unsqueeze(1))
@@ -106,11 +106,16 @@ class VectorQuantizerEMA(nn.Module):
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
 
+
 class Residual(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_hiddens):
         super(Residual, self).__init__()
-        self._block = nn.Sequential(nn.ReLU(True),nn.Conv2d(in_channels=in_channels, out_channels=num_residual_hiddens, kernel_size=3,stride=1, padding=1, bias=False),
-                                    nn.ReLU(True),nn.Conv2d(in_channels=num_residual_hiddens, out_channels=num_hiddens, kernel_size=1,stride=1, bias=False))
+        self._block = nn.Sequential(nn.ReLU(True),
+                                    nn.Conv2d(in_channels=in_channels, out_channels=num_residual_hiddens, kernel_size=3,
+                                              stride=1, padding=1, bias=False),
+                                    nn.ReLU(True),
+                                    nn.Conv2d(in_channels=num_residual_hiddens, out_channels=num_hiddens, kernel_size=1,
+                                              stride=1, bias=False))
 
     def forward(self, x):
         return x + self._block(x)
@@ -120,7 +125,8 @@ class ResidualStack(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
         super(ResidualStack, self).__init__()
         self._num_residual_layers = num_residual_layers
-        self._layers = nn.ModuleList([Residual(in_channels, num_hiddens, num_residual_hiddens) for _ in range(self._num_residual_layers)])
+        self._layers = nn.ModuleList(
+            [Residual(in_channels, num_hiddens, num_residual_hiddens) for _ in range(self._num_residual_layers)])
 
     def forward(self, x):
         for i in range(self._num_residual_layers):
@@ -131,10 +137,14 @@ class ResidualStack(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
         super(Encoder, self).__init__()
-        self._conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens // 2, kernel_size=4, stride=2,padding=1)
-        self._conv_2 = nn.Conv2d(in_channels=num_hiddens // 2, out_channels=num_hiddens, kernel_size=4, stride=2,padding=1)
+        self._conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens // 2, kernel_size=4, stride=2,
+                                 padding=1)
+        self._conv_2 = nn.Conv2d(in_channels=num_hiddens // 2, out_channels=num_hiddens, kernel_size=4, stride=2,
+                                 padding=1)
         self._conv_3 = nn.Conv2d(in_channels=num_hiddens, out_channels=num_hiddens, kernel_size=3, stride=1, padding=1)
-        self._residual_stack = ResidualStack(in_channels=num_hiddens, num_hiddens=num_hiddens, num_residual_layers=num_residual_layers, num_residual_hiddens=num_residual_hiddens)
+        self._residual_stack = ResidualStack(in_channels=num_hiddens, num_hiddens=num_hiddens,
+                                             num_residual_layers=num_residual_layers,
+                                             num_residual_hiddens=num_residual_hiddens)
 
     def forward(self, inputs):
         x = self._conv_1(inputs)
@@ -149,9 +159,13 @@ class Decoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
         super(Decoder, self).__init__()
         self._conv_1 = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens, kernel_size=3, stride=1, padding=1)
-        self._residual_stack = ResidualStack(in_channels=num_hiddens, num_hiddens=num_hiddens, num_residual_layers=num_residual_layers, num_residual_hiddens=num_residual_hiddens)
-        self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens, out_channels=num_hiddens // 2, kernel_size=4, stride=2, padding=1)
-        self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens // 2, out_channels=1, kernel_size=4, stride=2, padding=1)
+        self._residual_stack = ResidualStack(in_channels=num_hiddens, num_hiddens=num_hiddens,
+                                             num_residual_layers=num_residual_layers,
+                                             num_residual_hiddens=num_residual_hiddens)
+        self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens, out_channels=num_hiddens // 2, kernel_size=4,
+                                                stride=2, padding=1)
+        self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens // 2, out_channels=1, kernel_size=4, stride=2,
+                                                padding=1)
 
     def forward(self, inputs):
         x = self._conv_1(inputs)
@@ -162,7 +176,8 @@ class Decoder(nn.Module):
 
 
 class VQVAEModel(nn.Module):
-    def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens, num_embeddings, embedding_dim, commitment_cost, decay=0):
+    def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens, num_embeddings, embedding_dim,
+                 commitment_cost, decay=0):
         super(VQVAEModel, self).__init__()
         self._encoder = Encoder(1, num_hiddens, num_residual_layers, num_residual_hiddens)
         self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens, out_channels=embedding_dim, kernel_size=1, stride=1)
@@ -180,3 +195,23 @@ class VQVAEModel(nn.Module):
 
         return loss, x_recon, perplexity
 
+    def encode(self, x):
+        z = self._encoder(x)
+        z = self._pre_vq_conv(z)
+        loss, quantized, perplexity, encoding_indices = self._vq_vae(z)
+        return encoding_indices
+
+    def reconstruct_from_code(self, encoding_indices):
+        batch_size, height, width = encoding_indices.shape
+        encoding_indices = encoding_indices.view(-1)
+        encodings = torch.nn.functional.one_hot( encoding_indices, num_classes=self._vq_vae._num_embeddings)
+        encodings = encodings.float()
+        quantized = torch.matmul(encodings, self._vq_vae._embedding.weight)
+        quantized = quantized.view(batch_size, height, width, self._vq_vae._embedding_dim)
+        quantized = quantized.permute(0, 3, 1, 2).contiguous()
+        x_recon = self._decoder(quantized)
+        return x_recon
+
+    @property
+    def num_embeddings(self):
+        return self._vq_vae._num_embeddings
