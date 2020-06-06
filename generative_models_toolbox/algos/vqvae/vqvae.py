@@ -66,6 +66,7 @@ class VectorQuantizerEMA(nn.Module):
         # convert inputs from BCHW -> BHWC
         inputs = inputs.permute(0, 2, 3, 1).contiguous()
         input_shape = inputs.shape
+        batch_size, height, width, channels = input_shape
 
         # Flatten input
         flat_input = inputs.view(-1, self._embedding_dim)
@@ -103,6 +104,7 @@ class VectorQuantizerEMA(nn.Module):
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
+        encoding_indices = encoding_indices.view(batch_size, height, width)
         # convert quantized from BHWC -> BCHW
         return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
 
